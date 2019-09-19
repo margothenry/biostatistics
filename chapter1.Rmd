@@ -1,0 +1,112 @@
+---
+title: "Chapter 1"
+output: html_document
+---
+# Binomial Distribution  
+[insert binomial formula]   
+where,  
+* p + q = 1  
+* p is the probability of success, q = (1 - p) is the probability of failure  
+* n is the total number of trials  
+* x is the random variable we are looking for   
+
+### Exercise 1.2  
+X = 2 for a Binom( 10, 0.3 )
+here:  
+* x = 2      
+* n = 10        
+* p = 0.3      
+* q = 0.7    
+
+dbinom( x, n, p )
+```{r, include=TRUE}
+dbinom( 2, 10, 0.3)
+```
+
+X <= 2 for a Binom( 10, 0.3)  
+here:  
+* x = 0, 1, 2  
+* n, p and q remain the same   
+```{r}
+dbinom( 0, 10, 0.3 ) + dbinom( 1, 10, 0.3 ) + dbinom( 2, 10, 0.3 )
+```
+
+or we can say x = 0:2 and plug it into dbinom( x, n, p )  
+```{r}
+sum(dbinom( 0:2, 10, 0.3 )) 
+```
+
+We can check with another function pbinom( x, n, p)  
+```{r}
+pbinom( 2, 10, 0.3) 
+```
+
+# Poisson Distribution  
+Poisson and Binomial are related, the binomila distribution can be approximated by the poisson distribution.  
+[insert lambda = np]  
+[insert poisson distribution formula]   
+
+One way of computing the poisson distribution in R for lambda = 5 and x = 3   
+```{r}
+5^3 * exp(-5) / factorial(3)
+```
+
+or we can use dpois( q, lambda)
+```{r}
+dpois( 3, 5 )
+```
+
+For exercise 3 we need to know about rank statistics. Rank statistics are ordered statistics, which are sample random variable that are ordered from smaller (minimum), to largest (maxium).  
+So, x(1) < x(2) < ... < x(n)  
+
+We also need to know about the complementary event.  
+If we want to find P(X >= 1), you would have to compute P(X = 1) + P(X = 2) + ... + P(X = n).  
+That could take a long time if n is big. If n = 100, we would have to compute 100 terms. Since all the probabilities sum up to 1, we can compute the complementary event, which is 1 - P(X < 1). Which would mean that we only need to compute one term, P(X = 0).  
+to summarise:  1 - P(X = 0) = P(X >= 1)  
+
+Lastely, for taking the complementary of a rank statistic,P(X(n) >= x) = 1 - P(X <= x - 1)^n, n being the number of independent events we want to observe.  
+
+For exercise 1.3 we need to make a function and parameters and understand what the function should be doing. We want a function to compute the probability of having a maximum as big as m when looking across n Poisson variables with rate lambda.   
+The question tells us we need parameters, n, m and lambda. It is also telling us that we want the probability for Poisson, so we will be using the ppois() function. Now we have to use our knowledge on complementary of a rank statistic to make the body of the function.  
+
+### Exercise 1.3  
+
+```{r}
+  poisson_max_function = function(n, m, lambda) {
+    prob = 1 - ppois( m-1, lambda )^n
+    return(prob)
+  }
+```
+
+### Exercise 1.4
+We write the function to have default values for its arguments so that when you do not have any paramters it will assume you want the default parameters. In this case, poisson_max_function would give us an error. After this exercise, poisson_max_function will give us an output.
+
+```{r}
+  poisson_max_function = function(n = 100, m = 1, lambda = 5 ) {
+    prob = 1 - ppois( m-1, lambda )^n
+    return(prob)
+  }
+```
+
+```{r}
+poisson_max_function()
+```
+
+## Multinomial Distribution
+The multinomial distribution is an extension of the binomial distribution with more than two outcomes.  
+[insert multinomial function]  
+
+Let's look at an example:  
+If we are randomly choosing 8 people from an audience that contain 50% biologist, 30% statisticians, and 20% engineers, what is the probability of choosing exaclty 4 biologist, 3 statisticians and 1 engineer?
+
+we can use the dmultinom() function to solve this.  
+```{r}
+dmultinom(c(4, 3, 1), prob = c(0.5, 0.3, 0.2))
+```
+
+The multinomial has many uses in genetics whre a person may have 1 of many possible alleles, that occur with certain probabilities in a given population, at a gene locus.  
+
+### Exercise 1.8
+Let's do it together!!!
+
+
