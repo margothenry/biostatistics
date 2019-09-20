@@ -26,3 +26,13 @@
 
 #Exercise 1.6
   
+  
+#Exercise 1.7  
+  rv = rpois( 100, 3)
+  mean(rv)
+  var(rv)
+  
+#Exercise 1.8 
+  #A
+  
+  #B
