@@ -21,8 +21,17 @@ library(Biostrings)
 library(BSgenome.Celegans.UCSC.ce2)
 ```
 
-# Questions we will answer in this chapter
+# Goals for this chapter  
+* Learn how to obtain the probabilities of all possible outcomes from a given model and see how we can compare the theoretical frequencies with those observed in real data.  
+* Explore a complete example of how to use the Poisson distribution to analyse data on epitope detection.  
+* See how we can experiment with the most useful generative models for discrete data: Poisson, binomial, multinomial.  
+  + Poisson: Mostly used to calculate rates, for example, calculating the rate of cancer cell formation in an hour.  
+  + Binomial: can be used for testing a new drug that is being introduced to cure a disease, it either cures the disease (it's successful) or it doesn't cure the disease (it's a failure).  
+  + Multinomial: Used in genetics where a person may have 1 of many possible alleles, that occur with certain probabilities in a given population, at a gene locus.  
+* Use the R functions for computing probabilities and counting rare events.
+Generate random numbers from specified distributions.  
 
+# Questions we will answer in this chapter
 
 * Given a certain model, how can we obtain the probabilities for all possible outcomes?
 * How do theoretical frequencies compare with those observed in real data?
@@ -289,7 +298,7 @@ The test statistic is defined to be:
 
 $\chi^2 =\sum_{i=1}^n \frac{(E[x_i]-x_i)^2}{E[x_i]}$
 
-That is, for each individual observed x, we take the squared difference of its expected value and the observed value, then divide by the expected value. We will show go though the process of generating this statistic directly from the above sampling.
+That is, for each individual observed x, we take the squared difference of its expected value and the observed value, then divide by the expected value. We will show the step by step process of generating this statistic directly from the above sampling.
 
 First, let's store this matrix (this is what rmultinom() gives us as output) into an object.
 
@@ -456,6 +465,12 @@ So, if we want our test to have a power equal to 80% we must have a minimum samp
 
 ## 1.1
 
+Task:
+
+Other than Poisson, Binomial, and Multinomial, find two discrete distribution that have base R functions associated to them.
+
+Solution:
+
 Geometric Distribution:
 
 Given a probability p, how many failures will it take to see the first success?
@@ -487,6 +502,13 @@ phyper(0, 5, 20, 10, lower.tail = F)
 
 ## 1.2
 
+Task:
+
+Given that X follows a Binomial distribution with n = 10 and p = .3 what is $P(X \le 2 )$?
+
+Try this two ways, the first using only dbinom(), and the other with a different function.
+
+Solution:
 
 X = 2 for a Binom( 10, 0.3 )
 here:  
@@ -522,6 +544,12 @@ pbinom( 2, 10, 0.3)
 
 ## 1.3
 
+Task:
+
+Write a function to compute the probability of having a maximum as big as m when looking across n Poisson variables with rate lambda
+
+Solution:
+
 ```{r}
 poisson_max_function = function(n, m, lambda) {
   prob = 1 - ppois( m-1, lambda )^n
@@ -531,6 +559,12 @@ poisson_max_function = function(n, m, lambda) {
 
 
 ## 1.4
+
+Task:
+
+Rewrite the functions in 1.3 to have default values for its arguments.
+
+Solution:
 
 We write the function to have default values for its arguments so that when you do not have any parameters it will assume you want the default parameters. In this case, Poisson_max_function would give us an error. After this exercise, Poisson_max_function will give us an output.
 
@@ -546,6 +580,15 @@ poisson_max_function()
 ```
 
 ## 1.5
+
+Task:
+
+Using the epitope example, what is the probability of having a maximum of 9 or larger in 100 trials? Find the answer by using simulation. 
+
+How many simulations would you need to run to prove that the probability is smaller that .000001
+
+Solution:
+
 
 Writing functions is always a good idea when we want to repeat a task.
 ```{r}
@@ -565,8 +608,15 @@ a = replicate(1e5, pois_has_max(100, 9, .5))
 mean(a)
 ```
 
+We would need $\frac{1}{.000001} = 1,000,000$ simulations
 
 ## 1.6
+
+Task:
+
+Using the dXXXX() functions create various plots, list five continuous distributions. 
+
+Solution:
 
 The key here is that we can feed the distribution functions a vector and it will give us the probables for each value. Also seq is a nice way to generate sequences.
 ```{r}
@@ -615,6 +665,14 @@ qplot(x = seq_exp, y = seq_dexp)
 
 ## 1.7
 
+Task:
+
+Generate 100 instances of a Poisson(3) random variable. 
+
+What is the mean? What is the variance?
+
+Solution:
+
 Note that the mean of a pois(3) is 3, and the variance is also 3.
 ```{r}
 
@@ -629,6 +687,14 @@ var(poisson_rv)
 
 
 ## 1.8
+
+Task:
+
+a.) Explore the nucleotide frequencies of chromosome M by using a dedicated function in the Biostrings package from Bioconductor.
+
+b.) Test if the C. elegans data is consistent with the uniform model (all nucleotide frequencies are the same) via simulation.
+
+Solution:
 
 Work in progress, might do it live in class!
 
