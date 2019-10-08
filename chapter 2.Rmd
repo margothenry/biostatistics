@@ -1,0 +1,537 @@
+---
+title: "Chapter 2: Statistical Modeling"
+output: html_document
+---
+library(tidyverse)
+library(vcd)
+
+#2.3 A simple example of statistical modeling
+```{r}
+load("/data/e100.RData")
+e99 = e100[-which.max(e100)]
+```
+
+Visualizing goodness of fit plot, for discrete data, we can plot a barplot of frequencies.
+```{r}
+barplot(table(e99), space = 0.8, col = "chartreuse4")
+```
+goodness-of-fit diagram is known as the rootogram.
+```{r}
+gf1 = goodfit( e99, "poisson")
+rootogram(gf1, xlab = "", rect_gp = gpar(fill = "chartreuse4"))
+```
+
+Q:To calibrate what such a plot looks like with a known Poisson variable, use rpois with λ = 0.05 to generate 100 Poisson distributed numbers and draw their rootogram.
+
+```{r}
+poisson<-rpois(100,0.5)
+gf2 = goodfit(poisson, "poisson")
+rootogram(gf2, xlab="", rect_gp = gpar(fill = "chartreuse"))
+```
+
+Estimating the parameter of the Poisson distribution
+```{r}
+table(e100)
+```
+
+```{r}
+answer = dpois(c(0, 1, 2, 7), lambda = 3) ^ (c(58, 34, 7, 1))
+prod(answer)
+```
+
+Q:Compute the probabimlity as above for m = 0,1,2,0.4
+```{r}
+prod(dpois(c(0, 1, 2, 7), lambda = 0) ^ (c(58, 34, 7, 1)))
+prod(dpois(c(0, 1, 2, 7), lambda = 1) ^ (c(58, 34, 7, 1)))
+prod(dpois(c(0, 1, 2, 7), lambda = 2) ^ (c(58, 34, 7, 1)))
+prod(dpois(c(0, 1, 2, 7), lambda = 0.4) ^ (c(58, 34, 7, 1)))
+```
+
+###likelihood function of lambda
+
+```{r}
+loglikelihood  =  function(lambda, data = e100) {
+  sum(log(dpois(data, lambda)))
+}
+```
+
+```{r}
+lambdas = seq(0.05, 0.95, length = 100)
+loglik = vapply(lambdas, loglikelihood, numeric(1))
+plot(lambdas, loglik, type = "l", col = "red", ylab = "", lwd = 2,
+     xlab = expression(lambda)) 
+m0 = mean(e100)
+m0
+abline(v = m0, col = "blue", lwd = 2)
+abline(h = loglikelihood(m0), col = "purple", lwd = 2)
+```
+The red curve is the log-likelihood function. The vertical line shows the value of m (the mean) and the horizontal line the log-likelihood of m. It looks like m maximizes the likelihood.
+
+Q:What does the vapply function do in the above code? 
+vapply takes its first argument, the vector lambdas in this case, and iteratively applies the function loglikelihood.
+
+shortcut for goodfit:
+```{r}
+gf  =  goodfit(e100, "poisson")
+names(gf)
+
+gf$par
+```
+the outputs are tobserved, count, fitted, type, method, df, and par. observed is the observed frequencies, count is the count, fitted is the maximum likelihood, type is distribution, method is one of the methods, df are the degrees of freedom and par are the parameters.
+
+###Binomial distributions and maximum likelihood
+```{r}
+cb<-c(rep(0,110), rep(1,10))
+table(cb)
+```
+p^= 10/120 = 1/12 = 0.08333
+
+Plot of the likelihood as a function of the probabilities. 
+```{r}
+probs  =  seq(0, 0.3, by = 0.005)
+likelihood = dbinom(sum(cb), prob = probs, size = length(cb))
+plot(probs, likelihood, pch = 16, xlab = "probability of success",
+       ylab = "likelihood", cex=0.6)
+probs[which.max(likelihood)]
+```
+
+Likelihood for the binomial distribution
+n = 300, y = 40 successes
+n choose y
+```{r}
+choose(300, 40)
+```
+
+can calculate the likelihood with the following function:
+```{r}
+loglikelihood = function(theta, n = 300, k = 40) {
+  115 + k * log(theta) + (n - k) * log(1 - theta)
+}
+```
+
+which we plot for the range of θ from 0 to 1
+```{r}
+thetas = seq(0, 1, by = 0.001)
+plot(thetas, loglikelihood(thetas), xlab = expression(theta),
+  ylab = expression(paste("log f(", theta, " | y)")),type = "l")
+```
+The maximum lies at 40/300 = 0.1333.
+
+#2.5 More boxes:multinomial data
+
+### Nucleotide bias
+```{r}
+library("Biostrings")
+here("data", "e100.RData")
+staph = readDNAStringSet(here("data","staphsequence.ffn.txt"), "fasta")
+staph[1]
+letterFrequency(staph[[1]], letters = "ACGT", OR = 0)
+```
+Q:why did we use double square brackets?
+in R dataset[[i]] extracts the ith component in the dataset.
+
+Q:test whether the nucleotides are equally distributed across the four nucleotides for this first gene.
+
+```{r}
+letterFrq = vapply(staph, letterFrequency, FUN.VALUE = numeric(4),
+         letters = "ACGT", OR = 0)
+colnames(letterFrq) = paste0("gene", seq(along = staph))
+tab10 = letterFrq[, 1:10]
+computeProportions = function(x) { x/sum(x) }
+prop10 = apply(tab10, 2, computeProportions)
+round(prop10, digits = 2)
+p0 = rowMeans(prop10)
+p0
+```
+
+```{r}
+cs = colSums(tab10)
+cs
+expectedtab10 = outer(p0, cs, FUN = "*")
+round(expectedtab10)
+
+randomtab10 = sapply(cs, function(s) { rmultinom(1, s, p0) } )
+all(colSums(randomtab10) == cs)
+```
+
+```{r}
+stat = function(obsvd, exptd = 20 * pvec) {
+   sum((obsvd - exptd)^2 / exptd)
+}
+B = 1000
+simulstat = replicate(B, {
+  randomtab10 = sapply(cs, function(s) { rmultinom(1, s, p0) })
+  stat(randomtab10, expectedtab10)
+})
+S1 = stat(tab10, expectedtab10)
+sum(simulstat >= S1)
+```
+we can reject Ho
+
+```{r}
+hist(simulstat, col = "lavender", breaks = seq(0, 75, length.out=50))
+abline(v = S1, col = "red")
+abline(v = quantile(simulstat, probs = c(0.95, 0.99)),
+       col = c("darkgreen", "blue"), lty = 2)
+```
+ Histogram of simulstat. The value of S1 is marked by the vertical red line, those of the 0.95 and 0.99 quantiles by the dotted lines.
+
+# 2.6 The χ2 distribution
+better for larger values of S1.
+Visualize with QQ plots.
+
+```{r}
+Chi <- rchisq(1000, 30, ncp = 0)
+Chi_hist = hist(Chi, breaks=50)  
+Stimul_hist = hist(simulstat, breaks=50)
+```
+
+```{r}
+qs = ppoints(100)
+quantile(simulstat, qs)
+quantile(qchisq(qs, df = 30), qs)
+```
+
+QQ plot
+A QQ plot is a scatterplot created by plotting two sets of quantiles against one another. Visualize normality between the quantiles.
+```{r}
+qqplot(qchisq(ppoints(B), df = 30), simulstat, main = "",
+  xlab = expression(chi[nu==30]^2), asp = 1, cex = 0.5, pch = 16) +
+abline(a = 0, b = 1, col = "red")
+```
+
+```{r}
+1 - pchisq(S1, df = 30)
+```
+
+#2.7 Chargaff’s Rule
+
+```{r}
+load("~/Desktop/stat 4600/biostatistics/data/ChargaffTable.RData")
+ChargaffTable
+```
+
+Contingency table
+```{r}
+HairEyeColor[,, "Female"]
+dim(HairEyeColor)
+```
+```{r}
+class(HairEyeColor)
+```
+
+```{r}
+str(HairEyeColor)
+```
+
+###colour blindness and sex
+```{r}
+load("~/Desktop/stat 4600/biostatistics/data/Deuteranopia.RData")
+Deuteranopia
+```
+test whether there is a relationship between sex and the occurrence of color blindness.
+```{r}
+chisq.test(Deuteranopia)
+```
+if alpha is 5% we would reject the null hypothesis.
+
+###Hardy-Weinberg equilibrium
+The Hardy-Weinberg model looks at the relationship between 
+p and q if there is independence of the frequency of both alleles in a genotype, the so-called Hardy-Weinberg equilibrium.
+```{r}
+library(HardyWeinberg)
+data("Mourant")
+Mourant[214:216,]
+```
+
+```{r}
+nMM = Mourant$MM[216]
+nMN = Mourant$MN[216]
+nNN = Mourant$NN[216]
+loglik = function(p, q = 1 - p) {
+  2 * nMM * log(p) + nMN * log(2*p*q) + 2 * nNN * log(q)
+}
+xv = seq(0.01, 0.99, by = 0.01)
+yv = loglik(xv)
+plot(x = xv, y = yv, type = "l", lwd = 2,
+     xlab = "p", ylab = "log-likelihood")
+imax = which.max(yv)
+abline(v = xv[imax], h = yv[imax], lwd = 1.5, col = "blue")
+abline(h = yv[imax], lwd = 1.5, col = "purple")
+```
+```{r}
+phat  =  af(c(nMM, nMN, nNN))
+phat
+pMM   =  phat^2
+qhat  =  1 - phat
+```
+the expected values are
+```{r}
+pHW = c(MM = phat^2, MN = 2*phat*qhat, NN = qhat^2)
+sum(c(nMM, nMN, nNN)) * pHW
+```
+
+###Visual comparison to the Hardy-Weinberg equilibrium
+```{r}
+pops = c(1, 69, 128, 148, 192)
+genotypeFrequencies = as.matrix(Mourant[, c("MM", "MN", "NN")])
+HWTernaryPlot(genotypeFrequencies[pops, ],
+        markerlab = Mourant$Country[pops],
+        alpha = 0.0001, curvecols = c("red", rep("purple", 4)),
+        mcex = 0.75, vertex.cex = 1)
+```
+never seenthis before, this is cool.
+
+```{r}
+newgf = round(genotypeFrequencies / 50)
+HWTernaryPlot(newgf[pops, ],
+        markerlab = Mourant$Country[pops],
+        alpha = 0.0001, curvecols = c("red", rep("purple", 4)),
+        mcex = 0.75, vertex.cex = 1)
+```
+still cool
+
+###2.8 Modeling sequential dependencies: Markov chains
+
+```{r}
+haplo6 = read.table("data/haplotype6.txt",header = TRUE)
+haplo6
+```
+We are going to consider the occurrence of a haplotype as a `success’ in a binomial distribution using collected observations.
+
+The distribution of Y
+```{r}
+rtheta = rbeta(100000, 50, 350)
+y = vapply(rtheta, function(th) {
+  rbinom(1, prob = th, size = 300)
+}, numeric(1))
+hist(y, breaks = 50, col = "orange", main = "", xlab = "")
+```
+the marginal distribution of Y.
+
+Q:Verify that we could have gotten the same result as in the above code chunk by using R’s vectorisation capabilities and writing rbinom(length(rtheta), rtheta, size = 300).
+```{r}
+Y = rbinom(length(rtheta), rtheta, size = 300)
+hist(Y, breaks = 50, col = "orange", main = "", xlab = "")
+```
+neat, they are the same.
+
+Histogram of all the thetas such that Y = 40: the posterior distribution
+conditioning on Y = 40
+```{r}
+thetaPostEmp = rtheta[ y == 40 ]
+hist(thetaPostEmp, breaks = 40, col = "chartreuse4", main = "",
+  probability = TRUE, xlab = expression("posterior"~theta))
+densPostTheory  =  dbeta(thetas, 90, 610)
+lines(thetas, densPostTheory, type="l", lwd = 3)
+```
+```{r}
+mean(thetaPostEmp)
+```
+calculated the mean and summing over the inegrant
+```{r}
+dtheta = thetas[2]-thetas[1]
+sum(thetas * densPostTheory * dtheta)
+```
+Monte Carlo integration
+```{r}
+thetaPostMC = rbeta(n = 1e6, 90, 610)
+mean(thetaPostMC)
+```
+```{r}
+qqplot(thetaPostMC, thetaPostEmp, type = "l", asp = 1)
+abline(a = 0, b = 1, col = "blue")
+```
+doesnt differ much from normality, except at the end and the beginning.
+
+maximum a posteriori
+mean by numeric integration
+```{r}
+densPost2 = dbeta(thetas, 115, 735)
+mcPost2   = rbeta(1e6, 115, 735)
+
+sum(thetas * densPost2 * dtheta)
+```
+mean by monte carlo
+```{r}
+mean(mcPost2)
+```
+MAP estimate
+```{r}
+thetas[which.max(densPost2)] 
+```
+
+#2.10 Example: occurrence of a nucleotide pattern in a genome
+```{r}
+library("Biostrings")
+```
+
+```{r}
+vignette(package = "Biostrings")
+```
+
+```{r}
+library("BSgenome")
+ag = available.genomes()
+length(ag)
+```
+```{r}
+ag[1:2]
+```
+
+I am struggling to load the packages...and which package they come from.... :(
+
+<!-- window = 50000 -->
+<!-- starts = seq(1, length(ecoli) - window, by = window) -->
+<!-- ends   = starts + window - 1 -->
+<!-- numMatches = vapply(seq_along(starts), function(i) { -->
+<!--   countPattern(shineDalgarno, ecoli[starts[i]:ends[i]], -->
+<!--                max.mismatch = 0) -->
+<!--   }, numeric(1)) -->
+<!-- table(numMatches) -->
+
+
+When I figure out how to load these libraries I will continue the remainder of the questions :)
+
+#End of chapter questions
+##2.1
+
+```{r}
+num_seq <- rbinom(1000, 1000, 0.0001)
+sum(num_seq)
+
+
+goodfit = goodfit(num_seq, "poisson")
+rootogram(goodfit, xlab = "", rect_gp = gpar(fill = "gold"))
+```
+
+##2.2
+```{r}
+random_unif <- function(n){
+  still_random = runif(n, min=0, max=7) 
+  return(max(still_random))
+}
+```
+
+```{r}
+random_unif(25)
+```
+```{r}
+replicated <- replicate(100, random_unif(25))
+hist(replicated, col = "lavender")
+```
+
+##2.3
+
+```{r}
+mtb = read.table("data/M_tuberculosis.txt", header = TRUE)
+head(mtb, n = 4)
+```
+
+
+```{r}
+pro = mtb[mtb$AmAcid == "Pro", "Number"]
+pro/sum(pro)
+```
+
+a)
+```{r}
+(mtbAmAcid = table(mtb$AmAcid, mtb$Codon))
+table(mtb$AmAcid)
+table(mtb$Codon)
+```
+
+b)
+```{r}
+mtb %>% mutate(denomenator = Number/PerThous) %>% select(AmAcid, Codon, Number, denomenator, PerThous)
+```
+
+Number / denomenator = PerThous
+
+c) 
+not sure what this means: the strongest departure from uniform distribution among its possible spellings. 
+
+##2.4
+a)
+```{r}
+staph = readDNAStringSet("data/staphsequence.ffn.txt", "fasta")
+head(staph)
+tail(staph)
+staph[1:3] 
+```
+
+b)
+```{r}
+more_saph = letterFrequency(staph, letters="ACGT", OR=0) 
+head(more_saph)
+GC = letterFrequencyInSlidingView(staph[[1]], 100, "GC")
+head(GC)
+```
+c) 
+what is a sliding window...?
+
+d)
+still dont know what a sliding window is :(
+
+##2.5
+used code from the graph and added on to it to answer the question.
+```{r}
+thetas = seq(0, 1, by = 0.001)
+theta = thetas[1:500]
+beta_dist = data.frame(theta,
+           beta1 = dbeta(theta,1,1),
+           beta2 = dbeta(theta,0.5,0.5),
+           beta3 = dbeta(theta,10,30),
+           beta4 = dbeta(theta,20,60),
+           beta5 = dbeta(theta,50,150))
+          require(reshape2)
+datalong  =  melt(dfbetas, id="theta")
+ggplot(datalong) +
+geom_line(aes(x = theta,y=value,colour=variable)) +
+theme(legend.title=element_blank()) +
+geom_vline(aes(xintercept=0.25), colour="green", linetype="dashed")+
+scale_colour_discrete(name  ="Prior",
+                          labels=c("B(1,1)", "B(0.5,0.5)",
+                                   "B(10,30)", "B(20,60)","B(50,150)"))
+```
+E(x)=alpha/(alpha + beta) = 50/(50+150) = 0.25, hence why the B(50, 150) is perfectly centered at 0.25.
+
+##2.6
+alpha = 2.60, beta = 1.84
+
+```{r}
+rtheta = rbeta(100000, 2.60, 1.84)
+y = vapply(rtheta, function(th) {
+  rbinom(1, prob = th, size = 300)
+}, numeric(1))
+hist(y, breaks = 50, col = "orange", main = "", xlab = "")
+```
+
+
+
+```{r}
+thetaPostEmp = rtheta[ y == 40 ]
+hist(thetaPostEmp, breaks = 40, col = "chartreuse4", main = "",
+  probability = TRUE, xlab = expression("posterior"~theta))
+densPostTheory  =  dbeta(thetas, 90, 610)
+lines(thetas, densPostTheory, type="l", lwd = 3)
+```
+
+
+```{r}
+mean(thetaPostEmp)
+```
+```{r}
+dtheta = thetas[2]-thetas[1]
+sum(thetas * densPostTheory * dtheta)
+```
+```{r}
+thetaPostMC = rbeta(n = 1e6, 90, 610)
+mean(thetaPostMC)
+```
+
+```{r}
+qqplot(thetaPostMC, thetaPostEmp, type = "l", asp = 1)
+abline(a = 0, b = 1, col = "blue")
+```
+
