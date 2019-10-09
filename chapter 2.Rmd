@@ -380,15 +380,24 @@ ag[1:2]
 ```
 
 I am struggling to load the packages...and which package they come from.... :(
+```{r}
+library("BSgenome.Ecoli.NCBI.20080805")
+Ecoli
+shineDalgarno = "AGGAGGT"
+ecoli = Ecoli$NC_010473
+```
 
-<!-- window = 50000 -->
-<!-- starts = seq(1, length(ecoli) - window, by = window) -->
-<!-- ends   = starts + window - 1 -->
-<!-- numMatches = vapply(seq_along(starts), function(i) { -->
-<!--   countPattern(shineDalgarno, ecoli[starts[i]:ends[i]], -->
-<!--                max.mismatch = 0) -->
-<!--   }, numeric(1)) -->
-<!-- table(numMatches) -->
+```{r}
+library("seqLogo")
+window = 50000
+starts = seq(1, length(ecoli) - window, by = window)
+ends   = starts + window - 1
+numMatches = vapply(seq_along(starts), function(i) {
+  countPattern(shineDalgarno, ecoli[starts[i]:ends[i]],
+               max.mismatch = 0)
+  }, numeric(1))
+table(numMatches)
+```
 
 
 When I figure out how to load these libraries I will continue the remainder of the questions :)
