@@ -407,8 +407,6 @@ When I figure out how to load these libraries I will continue the remainder of t
 
 ```{r}
 num_seq <- rbinom(1000, 1000, 0.0001)
-sum(num_seq)
-
 
 goodfit = goodfit(num_seq, "poisson")
 rootogram(goodfit, xlab = "", rect_gp = gpar(fill = "gold"))
@@ -458,7 +456,7 @@ mtb %>% mutate(denomenator = Number/PerThous) %>% select(AmAcid, Codon, Number, 
 Number / denomenator = PerThous
 
 c) 
-not sure what this means: the strongest departure from uniform distribution among its possible spellings. 
+GLY can have 4 different codes for it GGG,GCA,... and it being bias mean which is found more.
 
 ##2.4
 a)
