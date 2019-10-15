@@ -105,6 +105,7 @@ NPreg %>% ggplot(aes(x = x, y = yp)) +
   geom_point()
 NPreg %>% ggplot(aes(x = x, y = yb)) +
   geom_point()
+#going to use yn as my y variable, cause its the only one with a decent spread
 
 #just having fun now
 NPreg %>% ggplot(aes(x = x, y = id1)) +
