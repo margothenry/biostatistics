@@ -99,6 +99,21 @@ data(NPreg)
 names(NPreg)
 
 #A)
+NPreg %>% ggplot(aes(x = x, y = yn)) +
+  geom_point()
+NPreg %>% ggplot(aes(x = x, y = yp)) +
+  geom_point()
+NPreg %>% ggplot(aes(x = x, y = yb)) +
+  geom_point()
+
+#just having fun now
+NPreg %>% ggplot(aes(x = x, y = id1)) +
+  geom_point()
+NPreg %>% ggplot(aes(x = x, y = id2)) +
+  geom_point()
+NPreg %>% ggplot(aes(x = x, y = class)) +
+  geom_point()
+
 ggplot(NPreg %>% filter(class == "1"), aes(x = x)) +
   geom_histogram(binwidth = 0.5, fill = "forestgreen")
 
@@ -121,8 +136,8 @@ table$cluster_membership =  m1@cluster
 table$truth_table = table$class == table$cluster_membership
 
 #D)
-
-
+NPreg %>% ggplot(aes(x = x, y = yn)) +
+  geom_point(colour = table$cluster_membership)
 
 #4 possible papers
 # https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-9868.2010.00756.x 
