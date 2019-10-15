@@ -1,3 +1,4 @@
+library(tidyverse)
 #1
 Myst <- readRDS("~/Desktop/stat 4600/biostatistics/data/Myst.rds")
 yvar = Myst$yvar
@@ -62,11 +63,11 @@ gp = rpois(length(lambda), lambda = lambda)
 ggplot(tibble(x = gp), aes(x = x)) +
   geom_histogram(bins = 100, fill= "purple")
 
-it = goodfit(gp, "poisson")
-plot(it, xlab = "")
-#rootogram(it, xlab = "", rect_gp = gpar(fill = "chartreuse4"))
-it$par
-lambda = it$par[[1]]
+ofit = goodfit(gp, "nbinomial")
+plot(ofit, xlab = "")
+ofit$par
+
+plot(ofit, xlab = "")
 
 #simbat : the output of the lapply loop is a list of tibbles, one for each value of lambdas. 
 lambdas = seq(100, 900, by = 100)
@@ -80,10 +81,17 @@ ggplot(simdat, aes(x = lambda, y = y)) +
   geom_beeswarm(alpha = 0.6, color = "purple")
 ggplot(simdat, aes(x = lambda, y = sqrt(y))) +
   geom_beeswarm(alpha = 0.6, color = "purple")
-#i think this is what we have to do..? not using a qqplot tho.. so idk
-#qq plot used to test  heterogenous, so could be kind of the same idea..? 
-qqplot(simdat, lambda, type = "l", asp = 1)
-abline(a = 0, b = 1, col = "blue")
+#nevermind we dont do this
+
+shape = ofit$par[[1]] 
+prob = ofit$par[[2]]
+test1 <- rgamma(10000, shape = shape, rate = prob )
+test2 <- rgamma(10000, shape = 10, rate = 3/2)
+qqplot( y = test1, x = test2 )
+
+test1 <- rgamma(10000, shape = shape, rate = prob )
+test3 <- rgamma(10000, shape = 10, rate = 1/3)
+qqplot( y = test1, x = test3 )
 
 #3
 library("flexmix")
@@ -107,9 +115,13 @@ matplot(NPreg$x, fitted(m1), pch = 16, type="p")
 points(NPreg$x, NPreg$yn)
 
 #C)
-#use table function
+table <- select(NPreg, class) 
+table$cluster_membership = ''
+table$cluster_membership =  m1@cluster
+table$truth_table = table$class == table$cluster_membership
 
 #D)
+
 
 
 #4 possible papers
