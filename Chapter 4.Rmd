@@ -24,6 +24,8 @@ pB = complimentary probability
 ```{r}
 pB = 1 - pA
 ```
+E step: expected value of the log likelyhood function.
+M step: maximizing.
 
 maxiter: Maximum number of iterations.
 
