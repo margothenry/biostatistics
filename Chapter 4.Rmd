@@ -8,6 +8,7 @@ library(tidyverse)
 ```
 1.
 ```{r}
+set.seed(1234)
 Myst <- readRDS("~/Desktop/stat 4600/biostatistics/data/Myst.rds")
 yvar = Myst$yvar
 ggplot(tibble(yvar), aes(x = yvar)) + geom_histogram(binwidth=0.025)
@@ -24,10 +25,12 @@ pB = complimentary probability
 ```{r}
 pB = 1 - pA
 ```
-E step: expected value of the log likelyhood function.
+E step: expected value of the log likelihood function.
 M step: maximizing.
 
 maxiter: Maximum number of iterations.
+
+miniter: Minimum number of iterations.
 
 minprior: Minimum prior probability of clusters, components falling below this threshold are removed during the iteration.
 
@@ -40,18 +43,22 @@ delta = +Inf
 tolerance = 1e-3
 miniter = 50; maxiter = 1000
 ```
+
 ```{r}
 while((delta > tolerance) && (iter <= maxiter) || (iter < miniter)) {
+  #E-STEP
   lambda = mean(pA)
-  muA = weighted.mean(yvar, pA) # M-Step
-  muB = weighted.mean(yvar, pB) # M-Step
-  sdA = sqrt(weighted.mean((yvar - muA)^2, pA)) # M-Step
-  sdB = sqrt(weighted.mean((yvar - muB)^2, pB)) # M-Step
+  muA = weighted.mean(yvar, pA) 
+  muB = weighted.mean(yvar, pB) 
+  sdA = sqrt(weighted.mean((yvar - muA)^2, pA)) 
+  sdB = sqrt(weighted.mean((yvar - muB)^2, pB)) 
   
-  phiA = dnorm(yvar, mean = muA, sd = sdA) # E-Step
-  phiB = dnorm(yvar, mean = muB, sd = sdB) # E-Step
+  #M-STEP
+  phiA = dnorm(yvar, mean = muA, sd = sdA) 
+  phiB = dnorm(yvar, mean = muB, sd = sdB) 
   pA   = lambda * phiA
   pB   = (1 - lambda) * phiB
+  
   ptot = pA + pB # E-Step (Normalizer)
   pA   = pA / ptot # E-Step (Post)
   pB   = pB / ptot # E-Step (Post)
@@ -68,6 +75,8 @@ Check this out to better understand E-Step and M-Step (Maybe im just dumb)
 http://tinyheero.github.io/2016/01/03/gmm-em.html#expectation-calculating-the-soft-labels-of-each-data-point-e-step
 
 These parameter-estimates are then used to determine the distribution of the latent variables in the next E step.
+
+compare with mixtools package.
 
 2
 ```{r}
