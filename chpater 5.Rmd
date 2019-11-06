@@ -1,7 +1,7 @@
 ---
 title: "Chapter 5"
 author: "Margot Henry"
-date: "05/11/2019"
+date: "01/11/2019"
 output: html_document
 ---
 
@@ -500,6 +500,32 @@ sil = silhouette(pam15, 15)
 plot(sil, col=c("red","green","blue","purple"), main="Silhouette")
 ```
 k= 4 has the highest average
+
+C)
+<!-- simdat = lapply(c(0, 8), function(mx) { -->
+<!--   lapply(c(0,8), function(my) { -->
+<!--     tibble(x = rnorm(100, mean = mx, sd = 2), -->
+<!--            y = rnorm(100, mean = my, sd = 2), -->
+<!--            class = paste(mx, my, sep = ":")) -->
+<!--    }) %>% bind_rows -->
+<!-- }) %>% bind_rows -->
+<!-- simdat -->
+similar to this code above but for uniform.
+```{r}
+simdat = lapply(c(0, 8), function(mx) {
+  lapply(c(0,8), function(my) {
+    tibble(x = runif(100, mean = mx, sd = 2),
+           y = runif(100, mean = my, sd = 2),
+           class = paste(mx, my, sep = ":"))
+   }) %>% bind_rows
+}) %>% bind_rows
+simdat
+```
+```{r}
+simdatxy = simdat[, c("x", "y")]
+ggplot(simdat, aes(x = x, y = y, col = class)) + geom_point() +
+  coord_fixed()
+```
 
 ### 5.2
 A)
