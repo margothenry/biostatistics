@@ -103,7 +103,7 @@ Distances and dissimilarities are also used to compare images, sounds, maps and 
 we cannot easily use probability dencities, the main choice to be made is the number of clusters.the main choice to be made is the number of clusters k.  
 
 ###The PAM method:
-1/Starts from a matrix of p features measured on a set of n observations.
+1.Starts from a matrix of p features measured on a set of n observations.
   2.Randomly pick k distinct cluster centers out of the n observations (“seeds”).
 3.Assign each of the remaining observation to the group to whose center it is the closest.
 4.For each group, choose a new center from the observations in the group, such that the sum of the distances of group members to the center is minimal; this is called the medoid.
@@ -504,30 +504,25 @@ k= 4 has the highest average
 C)
 same code used in textbook
 ```{r}
-simdat = lapply(c(0, 8), function(mx) {
-  lapply(c(0,8), function(my) {
-    tibble(x = rnorm(100, mean = mx, sd = 2),
-           y = rnorm(100, mean = my, sd = 2),
-           class = paste(mx, my, sep = ":"))
+simdat_unif = lapply(c(0, 8), function(x) {
+  lapply(c(0,8), function(y) {
+    tibble(x = runif(100, simdat$x[1]),
+           y = runif(100, simdat$y[1]),
+           class = paste(x, y, sep = ":"))
    }) %>% bind_rows
 }) %>% bind_rows
-simdat
+simdat_unif
 ```
 
 ```{r}
-simdatxy = simdat[, c("x", "y")]
-ggplot(simdat, aes(x = x, y = y, col = class)) + geom_point() +
-  coord_fixed()
+simdatxy_unif = simdat_unif[, c("x", "y")]
 ```
 ```{r}
-wss = tibble(k = 1:125, value = NA_real_)
-wss$value[1] = sum(scale(simdatxy, scale = FALSE)^2)
-for (i in 2:nrow(wss)) {
-  km  = kmeans(simdatxy, centers = wss$k[i])
-  wss$value[i] = sum(km$withinss)
-}
-ggplot(wss, aes(x = k, y = value)) + geom_col()
+pam_unif = pam(simdatxy_unif, 4)
+sil = silhouette(pam_unif, 4)
+plot(sil, col=c("red","green","blue","purple"), main="Silhouette")
 ```
+
 ### 5.2
 A)
 ```{r}
@@ -539,7 +534,7 @@ symnum(correlation)
 ```
 B)
 ```{r}
-pheatmap(correlation, cluster_rows = FALSE, cluster_cols = FALSE, color = redblue(10))
+pheatmap(correlation, cluster_rows = FALSE, cluster_cols = FALSE, color = redgreen(250))
 #whooooooa thats cool
 ```
 
