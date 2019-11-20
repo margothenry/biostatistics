@@ -1,0 +1,311 @@
+---
+title: "PCA (Via the statistical approach)"
+author: "Brandon Kozak and Margot Henry"
+date: "18/11/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(BiocManager)
+library(here)
+library(lattice)
+library(ggcorrplot)
+library(GGally)
+library(ggfortify)
+library(factoextra)
+library(ggrepel)
+library(ade4)
+library(pracma)
+library(MASS)
+ library(dslabs)
+library(ggridges)
+```
+
+# 1.0 How did we get to PCA?
+
+## 1.0.1 SVD, eigenvalues, and eigenvectors
+
+As we saw in the textbook, the basis for all things PCA was dependent on using a matrix decomposition known as Singular Value Decomposition (SVD). However, as much as the book tried, it never gave a clear cut answer as to why SVD was important, or even how we could interpret SVD in general. This only makes things worse once you realize that you are in a stats course but you have yet to see the statistical drive to PCA.
+
+In this set of notes we aim to show PCA from a different point of view, and discuss why SVD might be used over this method in general.
+
+## 1.0.2 The covariance Matrix
+
+One thing that the book as yet to introduce is the covarince matrix, or covariance at all for that matter.
+
+Covarince is a measurement of the relation ship between two variables. This is directly related to correlation, but is not standardized. This means that (similar to variance) it is hard to interpret what a value means without looking at the data itself. More over, the covarinace only gives us the direction of the relationship, where as the correlation gives us both the direction and the strength.
+
+It can be shown that $Cor(x,y) = \frac{Cov(x,y)}{\sqrt{Var(x)\times Var(y)}}$
+
+Simply put, the covariance matrix is a n-dimensional extension of variance. 
+
+That is, each $ij^{th}$ entry of this matrix is the covarince of the ${i^{th}}$ and ${j^{th}}$ variable or covariate. 
+
+Note that the diagonal entries give us $Cov(x_i,x_i)$, one can show that this is equivalent to $Var(x_i)$
+
+Furthermore $Cov(x,y) = Cov(y,x)$ this implies that the covarince matrix will always be symmetric.
+
+Ex.) Let's take a look at the turtle data!
+
+```{r}
+turtles = read.table("../data/PaintedTurtles.txt", header = TRUE)
+
+# To obtain the covariance matrix in R, we use cov()
+trutles_cov = cov(turtles[,-1])
+
+trutles_cov
+
+# Verify that the varainces match up.
+var(turtles[,2])
+var(turtles[,3])
+var(turtles[,4])
+```
+
+What do we see from this covarinace matrix exactly? Well we for sure know that there is some positive (direct) relationship between all three variables. However, it's hard to say how strong of a relationship since each variable has different ranges. For example, length and width have larger covariance because they take on larger values.
+
+
+# 1.1 Thinking like a statistician
+
+Now that we have the notion of a covarince matrix under our belt, lets try to build the workflow of PCA again.
+
+## 1.1.1 The intuition behind PCA
+
+Recall that PCA is a dimension reduction method. Our goal is to perform some linear transformations that takes our p-dimensional data and gives us k-dimensional data, where k is much smaller than p. 
+
+Beyond this, we also wish to keep as much information as possible after we reduce the dimension. Specifically, we wish that each new column (variable) we create to have maximal variance, and that each new column (variable) we create is uncorrelated with one another.
+
+We will see soon that these new columns (variables) are called principle components (PC's)
+
+## 1.1.2 The math that gets us there
+
+First, since the covaraince matrix gives us information about the variance and covarince between all of our variables, you can probably guess that we will be using it to obtain our PC's.
+
+That is, after some "fun" math, it can be shown that we can obtain the PC's by finding the eigenvectors of the covariance matrix of your data and then multiply them by our data.
+
+Furthermore, the corresponding eigenvalue will tell us the amount of explained variability for that PC.
+
+Now you might be thinking "How and where the heck did these eigenvalues and vectors even come from!?"
+
+To be completely honest, this comes from that fun math I was talking about, in particular (if you are feeling up for it) look up Lagrange multipliers.
+
+And much like SVD, it is hard to interpret eigenvalues and vectors in general, but in this context we get some nice results!
+
+P.S If you would like a crash course on how to find eigenvalues and vectors of a matrix by hand (Don't recommend it), then check out the following link!
+
+https://lpsa.swarthmore.edu/MtrxVibe/EigMat/MatrixEigen.html
+
+
+## 1.1.3 A quick example
+
+let's return back to the turtle data.
+
+To obtain the eigenvalues and vectors, we perform eigen value decomposition (also known as  spectral decomposition).
+
+In R we have a handy function called eigen()
+
+```{r}
+# eigen decomp of the covariance matrix of trutles
+
+decomp_turtles = eigen(cov(turtles[,-1]))
+
+# eigen values = explained variablilty for the corresponding PC
+decomp_turtles$values
+
+# eigen vectors = the loadings for the PC
+decomp_turtles$vectors
+
+# the PC's, each column is a turtle, and each row within each column is the PC value.
+decomp_turtles$vectors %*% t(turtles[,-1])
+
+# proportion of exmapled variablility per PC
+decomp_turtles$values / sum(decomp_turtles$values)
+
+# cummuliative proportion of exmapled variablility per PC
+cumsum(decomp_turtles$values / sum(decomp_turtles$values))
+```
+
+In other words, we see that the 1st PC explains over 98% of the variability in all three covariates.
+
+We will talk about how we can view the loadings in a bit.
+
+# 1.3 So many choices
+
+As you may have noticed, the work flow for PCA contains alot of choices that you (the analyst) will have to make. In this section we will give some guidelines on how to make these choices
+
+# 1.3.1 To scale or not to scale.
+
+As we discussed before, the covaraince of two variables is hard to interpret, and it typically not comparable. Because of this, if our data contains lots of measures of different units or ranges, it may be best to scale our data first. The easiest way to do this, is to find the eigenvalues and vectors on the correlation matrix, rather than the covariance matrix.
+
+For example, if we go back to the turtle data.
+
+```{r}
+# eigen decomp of the correlation matrix of trutles
+decomp_turtles = eigen(cor(turtles[,-1]))
+
+# eigen values = explained variablilty for the corresponding scaled PC
+decomp_turtles$values
+
+# eigen vectors = the loadings for the scaled PC
+decomp_turtles$vectors
+
+# the scaled PC's, each column is a turtle, and each row within each column is the scaled PC value.
+decomp_turtles$vectors %*% t(scale(turtles[,-1]))
+
+# proportion of explained variablility per PC
+decomp_turtles$values / sum(decomp_turtles$values)
+
+# cummuliative proportion of exmapled variablility per PC
+cumsum(decomp_turtles$values / sum(decomp_turtles$values))
+```
+
+However, we see that scaling may have not been to much of an issue here, as we get close to the same results!
+
+# 1.3.2 Picking the number of PC's
+
+There are generally two strategies for picking the number of PC's
+
+The first is more concrete. Pick some constant threshold $c$, the number of PC's we keep is equal to $p$ where $p$ is the PC who's cumulative explained variance is equal to or greater than $c$
+
+For example, say we pick $c=.95$, then in the turtle example, one PC would be good enough.
+
+The second involves a plot of the number of PC's v.s. the explained variability. This plot is known as a *scree plot*. With this method we look at the scree plot and pick a point before a sharp drop occurs. Of course, this may not always be obvious.
+
+For the turtle data we would see this
+
+```{r}
+
+plot(1:3,decomp_turtles$values, type="l", xlab="Number of PC's", ylab="Explained variability")
+points(decomp_turtles$values)
+```
+
+and again, pick 1 PC.
+ 
+# 1.4 Visualization and interpretations
+
+Now that we have a good understanding of the work flow of PCA, let take a look on how to visualize the projections and what they tell us.
+
+## 1.4.1 Visualization of the projection
+
+Throughout this section I will be using the function prcomp() to perform PCA. Note that prcomp() uses svd, but we can still interpret the PC's and loadings as if it was done using eigenvalues and vectors.
+
+Let's start off with the turtle data again.
+
+Even though we said one PC would be good enough, we mostly like to view a 2d projection, thus we normally take the first 2 PC's
+
+```{r}
+# perform PCA, we achive scaleing by setting scale=T
+pca_turtles = prcomp(turtles[,-1],scale = T)
+
+# explained variance
+pca_turtles$sdev
+
+# loadings
+pca_turtles$rotation
+
+# the PC's
+pca_turtles$x
+
+# to get a screeplot I like to use screeplot()
+screeplot(pca_turtles, type="lines")
+```
+
+ So using prcomp gives very similar results, despite using svd.
+ 
+ Now, if we want to look at the projection, my favorite method is to use autoplot from ggfortify, it is a extension for ggplot.
+ 
+ Note that a plot that contains both the PC's and the loading vectors is called a **Bi-plot**
+ 
+```{r}
+autoplot(pca_turtles,data=turtles,colour="sex",loadings = TRUE,
+         loadings.colour = 'black',loadings.label = TRUE, loadings.label.size = 3) +
+  scale_color_manual(values = c("orange", "skyblue4"))
+```
+
+## 1.4.2 Interpretation of the bi-plot
+
+First, each point on this plot is the value of PC1 and PC2. The black arrows are the loadings or eigenvectors.
+
+To interpret the loadings I like to look at the coefficients too. For PC1 we have:
+
+```{r}
+pca_turtles$rotation[,1]
+```
+ 
+In other words, no one variable is dominating the other. It seems that PC1 is simply capturing the positive relationship between each variable. Recall that the PC is just a "formula" based on the data, that is, in this case, a longer, wider, and taller turtle will always have a larger first PC.
+
+Also note how sex is clustered on either side of the x-axis. It would seem that PC1 might also be capturing some relationship about sex and the other variables. 
+
+This notion of interpreting the loadings onto latent variables is used often in factor analysis.
+
+For PC2, we have
+
+```{r}
+pca_turtles$rotation[,2]
+```
+
+Clearly height is dominating here, and length and width have negative coefficients.
+
+Interpreting this PC in particular is tricky (since it only explains 1.43% of the variability) but it may be capturing some underlying relationship between (height and sex), and (length and width). Notice that there is some vertical overlapping on the negative side of the bi-plot in terms of sex.
+
+# 1.5 Another example    
+```{r}
+# Data on Breast Cancer
+as.data.frame(brca$x) %>%
+gather(variable, measurement) %>% 
+  mutate(variable = reorder(variable, measurement, median)) %>% 
+  ggplot(aes(x = measurement, y = variable)) +
+geom_density_ridges() + theme_ridges() + coord_cartesian(xlim = c(0, 250))
+```  
+Checking to see if the variables are normaly distributed, then removing the variables that are not.    
+```{r}
+rem_index <- which(colnames(brca$x) %in% 
+                     c("area_worst", "area_mean",
+                       "perimeter_worst","perimeter_mean")
+                   )
+dataset <- brca$x[,-rem_index]
+decomp <- prcomp(dataset)
+summary(decomp)$importance[,1:3]
+rem_index2 <- grep("mean", colnames(brca$x), invert = TRUE)
+dataset <- brca$x[,-c(rem_index, rem_index2)] #dataset with only the means
+
+R <- cor(dataset) #calculating the correlation matrix
+pairs(dataset) #looking at the pairs plot to visualise their correlation
+```    
+Redo PCA but with the reduced dataset.    
+```{r}
+decomp <- prcomp(dataset)
+summary(decomp)$importance[,seq_len(3)]
+```    
+The second PC accounts for 99% of the variation.    
+
+Now lets look at a fe biplots!    
+```{r}
+# The biplot function rescales for us.  
+biplot(decomp)
+```
+```{r}
+#Or we can scale the data ourselves.  
+biplot(prcomp(dataset, scale = TRUE))
+```    
+We are looking for similarities between the observations. The orthogonal loadings can tell us that the variables are uncorrelated. An obtuse angle between loadings can tell us that there is negative correlation between the variables.    
+
+# 1.6 Why bother with SVD?
+
+## 1.6.1 Numerical stability
+
+It turns out performing eigenvalue decomposition on a computer may not always give precise answer, rather a loss of precision may occur. 
+This is not a issues when we perform SVD, hence most function opt to use this decomposition in favor of eigenvalue decomposition.
+
+I suppose the book was trying to tell us this all along!
+
+# 1.7 A few limitations to PCA    
+
+* the results of PCA depend on the scaling of the variables. This can be fixed by scaling each feature by its standard deviation, so that one ends up with dimensionless features with unital variance.    
+* PCA can capture linear correlations between the features but fails when this assumption is violated.    
