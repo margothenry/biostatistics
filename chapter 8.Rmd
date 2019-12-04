@@ -31,7 +31,7 @@ Between sequencing and counting, there is an important aggregation or clustering
 ```{r, message=FALSE}
 fn = system.file("extdata", "pasilla_gene_counts.tsv",
                   package = "pasilla", mustWork = TRUE)
- counts = as.matrix(read.csv(fn, sep = "\t", row.names = "gene_id"))
+counts = as.matrix(read.csv(fn, sep = "\t", row.names = "gene_id"))
 ```
 
 ```{r}
@@ -114,7 +114,7 @@ The SummarizedExperiment class – and therefore DESeqDataSet – also contains 
 
 ## 8.5.2 The DESeq2 method  
 Our aim is to identify genes that are differentially abundant between the treated and the untreated cells.  
-```{r}
+```{r, message = FALSE}
 pasilla = DESeq(pasilla)
 ```  
 The DESeq function is simply a wrapper that calls, in order, the functions estimateSizeFactors (for normalization), estimateDispersions (dispersion estimation) and nbinomWaldTest (hypothesis tests for differential abundance). The test is between the two levels textttuntreated and texttttreated of the factor condition.  
@@ -150,7 +150,7 @@ The 7 samples are shown in the 2D plane spanned by their first two principal com
 
 The heatmap:
 ```{r}
-library("pheatmap")
+
 select = order(rowMeans(assay(pas_rlog)), decreasing = TRUE)[1:30]
 pheatmap( assay(pas_rlog)[select, ],
      scale = "row",
@@ -213,7 +213,7 @@ the design matrix, xij, is the same for all genes. the rows j correspond to the 
 # 8.9 Two-factor analysis of the pasilla data  
 The pasilla data have other covariates, the covariate explains which type of sequencing was performed.  
 
-```{r}
+```{r, message=FALSE}
 pasillaTwoFactor = pasilla
 design(pasillaTwoFactor) = formula(~ type + condition)
 pasillaTwoFactor = DESeq(pasillaTwoFactor)
@@ -309,10 +309,10 @@ myMA = function(h, v, theta = 0.5) {
          ylim = c(-2.5, 2.5))
   abline(h = v * theta, col = "dodgerblue", lwd = 2)
 }
-myMA("greaterAbs", c(-1, 1))
-myMA("lessAbs",    c(-1, 1))
-myMA("greater",          1)
-myMA("less",         -1   )
+# myMA("greaterAbs", c(-1, 1))
+# myMA("lessAbs",    c(-1, 1))
+# myMA("greater",          1)
+# myMA("less",         -1   )
 ```  
 To produce the results tables instead of MA plots, the same arguments as to plotMA (except ylim) would be provided to the results function.  
 MA-plots of tests of log2 fold change with respect to a threshold value. From top to bottom, the tests are for , , , and .  
@@ -352,10 +352,14 @@ dge_list$samples
 ```
 
 ```{r}
-model <- model.matrix(~ counts, dge_list$samples)
+#model <- model.matrix(~ counts, dge_list$samples)
 ```
 ```{r}
 plotMDS(dge_list)
 ```
 
+```{r}
+# ggplot(as(dge, "data.frame"), aes(x = pvalue)) +
+#   geom_histogram(binwidth = 0.01, fill = "Royalblue", boundary = 0)
+```
 
